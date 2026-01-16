@@ -6,8 +6,17 @@ from math import ceil
 from app.core.db import get_db
 from .schemas import (PostPublic, PostSummary, PaginatedPosts, PostCreate, PostUpdate)
 from .repository import PostRepository
-
+from app.core.security import oauth2_scheme, get_current_user
 router = APIRouter(prefix="/posts", tags=['posts'])
+
+# def get_fake_user():
+#     return {'username':'Eduard', 'role': 'Admin'}
+#
+# @router.get('/me')
+# def get_me(user: dict = Depends(get_fake_user)):
+#     return {
+#         'user': user
+#
 
 @router.get('', response_model=PaginatedPosts)
 def list_posts(
@@ -88,14 +97,14 @@ def get_post(post_id: int = Path(
 
 @router.post('', response_model=PostPublic, response_description='Entrada creada correctament',
           status_code=status.HTTP_201_CREATED)
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
+def create_post(post: PostCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
     repository = PostRepository(db)
 
     try:
         post = repository.create_post(
             title=post.title,
             content=post.content,
-            author = (post.author.model_dump() if post.author else None),
+            author = user,
             tags = [tag.model_dump() for tag in post.tags]
         )
         db.commit()
@@ -114,7 +123,7 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
             response_description='Entrada creada correctament',
             response_model_exclude_none=True)
 
-def update_post(post_id: int, data: PostUpdate, db: Session = Depends(get_db)):
+def update_post(post_id: int, data: PostUpdate, db: Session = Depends(get_db), user = Depends(get_current_user)):
     repository = PostRepository(db)
     post = repository.get(post_id)
 
@@ -131,7 +140,7 @@ def update_post(post_id: int, data: PostUpdate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail='Error al actualitzar el post')
 
 @router.delete('/{post_id}',status_code=status.HTTP_204_NO_CONTENT   )
-def delete_post(post_id: int, db: Session = Depends(get_db)):
+def delete_post(post_id: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
     repository = PostRepository(db)
     post = repository.get(post_id)
     if not post:
@@ -143,4 +152,9 @@ def delete_post(post_id: int, db: Session = Depends(get_db)):
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail='Error al eliminar el post')
+
+
+@router.get('/secure')
+def secure_endpoint(token: str = Depends(oauth2_scheme)):
+    return {'message': 'Accés amb Token', 'token_rebut': token}
 

@@ -34,7 +34,7 @@ class PostCreate(BaseModel):
         examples= ['El meu primer post amb FastApi. És vàlid perquè te més de 10 caràcters'],
     )
     tags: List[Tag] = Field(default_factory=list)
-    author: Optional[Author] = None
+    # author: Optional[Author] = None
 
     @field_validator('title')
     @classmethod
