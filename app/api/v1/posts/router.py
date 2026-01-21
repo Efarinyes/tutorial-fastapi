@@ -7,6 +7,11 @@ from app.core.db import get_db
 from .schemas import (PostPublic, PostSummary, PaginatedPosts, PostCreate, PostUpdate)
 from .repository import PostRepository
 from app.core.security import oauth2_scheme, get_current_user
+# importacions per treballar amb funcions syncrones i asyncrones
+import time
+import asyncio
+import threading
+
 router = APIRouter(prefix="/posts", tags=['posts'])
 
 # def get_fake_user():
@@ -16,6 +21,19 @@ router = APIRouter(prefix="/posts", tags=['posts'])
 # def get_me(user: dict = Depends(get_fake_user)):
 #     return {
 #         'user': user
+#
+
+# @router.get("/sync")
+# def sync_endpoint():
+#     print("SYNC thread: ", threading.current_thread().name)
+#     time.sleep(8)
+#     return {'Message':'Funció syncrona finalitza'}
+#
+# @router.get('/async')
+# async def async_endpoint():
+#     print("ASYNC thread: ", threading.current_thread().name)
+#     await asyncio.sleep(8)
+#     return {'Message': 'Funció asyncrona finalitza'}
 #
 
 @router.get('', response_model=PaginatedPosts)
