@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import Integer, String, Text, DateTime, ForeignKey, Table, Column
@@ -24,6 +23,7 @@ class PostORM(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    image_url = mapped_column(String(300), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     author_id: Mapped[Optional[int]] = mapped_column(ForeignKey('authors.id'))

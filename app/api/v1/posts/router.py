@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Query, Depends, Path, HTTPException, status
+from fastapi import APIRouter, Query, Depends, Path, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from typing import List, Optional, Union, Literal
+from typing import List, Optional, Union, Literal, Annotated
 from math import ceil
 from app.core.db import get_db
 from .schemas import (PostPublic, PostSummary, PaginatedPosts, PostCreate, PostUpdate)
 from .repository import PostRepository
 from app.core.security import oauth2_scheme, get_current_user
+from app.services.file_storage import save_upload_file
 # importacions per treballar amb funcions syncrones i asyncrones
-import time
-import asyncio
-import threading
+# import time
+# import asyncio
+# import threading
 
 router = APIRouter(prefix="/posts", tags=['posts'])
 
@@ -23,6 +24,7 @@ router = APIRouter(prefix="/posts", tags=['posts'])
 #         'user': user
 #
 
+# Descomentar les funcions que segueixen
 # @router.get("/sync")
 # def sync_endpoint():
 #     print("SYNC thread: ", threading.current_thread().name)
@@ -112,18 +114,21 @@ def get_post(post_id: int = Path(
         return PostPublic.model_validate(post, from_attributes=True)
     return PostSummary.model_validate(post, from_attributes=True)
 
-
 @router.post('', response_model=PostPublic, response_description='Entrada creada correctament',
           status_code=status.HTTP_201_CREATED)
-def create_post(post: PostCreate, db: Session = Depends(get_db), user = Depends(get_current_user)):
+def create_post(post: Annotated[PostCreate, Depends(PostCreate.as_form)], image: Optional[UploadFile] = File(None), db: Session = Depends(get_db), user = Depends(get_current_user)):
     repository = PostRepository(db)
-
+    saved = None
     try:
+        if image is not None:
+            saved = save_upload_file(image)
+        image_url = saved['url'] if saved else None
         post = repository.create_post(
             title=post.title,
             content=post.content,
             author = user,
-            tags = [tag.model_dump() for tag in post.tags]
+            tags = [tag.model_dump() for tag in post.tags],
+            image_url = image_url,
         )
         db.commit()
         db.refresh(post)
@@ -134,7 +139,6 @@ def create_post(post: PostCreate, db: Session = Depends(get_db), user = Depends(
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail='Error al crear post')
-
 
 @router.put('/{post_id}',
             response_model=PostPublic,
@@ -163,14 +167,12 @@ def delete_post(post_id: int, db: Session = Depends(get_db), user = Depends(get_
     post = repository.get(post_id)
     if not post:
         raise HTTPException(status_code=404, detail='Entrada no existeix')
-
     try:
         repository.delete_post(post)
         db.commit()
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail='Error al eliminar el post')
-
 
 @router.get('/secure')
 def secure_endpoint(token: str = Depends(oauth2_scheme)):

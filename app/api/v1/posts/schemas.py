@@ -1,5 +1,6 @@
-from typing import Optional, List, Union, Literal
+from typing import Optional, List, Union, Literal, Annotated
 from pydantic import BaseModel, Field, field_validator, EmailStr, ConfigDict
+from fastapi import Form
 
 class Tag(BaseModel):
     name: str = Field(..., min_length=3, max_length=20, description='Nom de l\'etiqueta')
@@ -16,7 +17,7 @@ class PostBase(BaseModel):
     # tags: Optional[List[Tag]] = []
     tags: Optional[List[Tag]] = Field(default_factory=list)
     author: Optional[Author] = None
-
+    image_url: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class PostCreate(BaseModel):
@@ -45,6 +46,15 @@ class PostCreate(BaseModel):
                 print(word)
                 raise ValueError(f'Error. {word} no es paraula permesa')
         return value
+    @classmethod
+    def as_form(
+            cls,
+            title: Annotated[str, Form(min_length=5)],
+            content: Annotated[str, Form(min_length=10)],
+            tags: Annotated[Optional[list[str]], Form()] = None,
+    ):
+        tag_objs = [Tag(name=tag) for tag in (tags or [])]
+        return cls(title=title, content=content, tags=tag_objs)
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=100)
