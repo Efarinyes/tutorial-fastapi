@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, field_validator, EmailStr, ConfigDict
 from fastapi import Form
 
 class Tag(BaseModel):
-    name: str = Field(..., min_length=3, max_length=20, description='Nom de l\'etiqueta')
+    name: str = Field(..., min_length=3, max_length=35, description='Nom de l\'etiqueta')
     model_config = ConfigDict(from_attributes=True)
 
 class Author(BaseModel):

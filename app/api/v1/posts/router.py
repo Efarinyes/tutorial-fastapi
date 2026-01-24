@@ -8,6 +8,7 @@ from .schemas import (PostPublic, PostSummary, PaginatedPosts, PostCreate, PostU
 from .repository import PostRepository
 from app.core.security import oauth2_scheme, get_current_user
 from app.services.file_storage import save_upload_file
+
 # importacions per treballar amb funcions syncrones i asyncrones
 # import time
 # import asyncio
@@ -22,7 +23,6 @@ router = APIRouter(prefix="/posts", tags=['posts'])
 # def get_me(user: dict = Depends(get_fake_user)):
 #     return {
 #         'user': user
-#
 
 # Descomentar les funcions que segueixen
 # @router.get("/sync")
@@ -135,7 +135,7 @@ def create_post(post: Annotated[PostCreate, Depends(PostCreate.as_form)], image:
         return post
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail='Títol ja existeix')
+        raise HTTPException(status_code=409, detail='Nom etiqueta ja existeix')
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail='Error al crear post')

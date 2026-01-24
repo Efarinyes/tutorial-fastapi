@@ -75,10 +75,17 @@ class PostRepository:
         return author_obj
 
     def ensure_tag(self, name: str) -> TagORM:
-        tag_obj = self.db.execute(
-            select(TagORM).where(TagORM.name.ilike(name))
-        ).scalar_one_or_none()
+        normalize = name.strip().lower()
 
+        # implementació per operar amb postgreSQL
+        # tag_obj = self.db.execute(
+        #     select(TagORM).where(TagORM.name.ilike(name))
+        # ).scalar_one_or_none()
+
+        # implementació per operar amb SQLite
+        tag_obj = self.db.execute(
+            select(TagORM).where(func.lower(TagORM.name) == normalize)
+        ).scalar_one_or_none()
         if tag_obj:
             return tag_obj
 
@@ -93,9 +100,15 @@ class PostRepository:
             author_obj = self.ensure_author(author['username'], author['email'])
 
         post = PostORM(title=title, content=content, image_url=image_url, author=author_obj)
-        for tag in tags:
-            tag_obj = self.ensure_tag(tag['name'])
+
+        names = tags[0]['name'].split(',')
+        for name in names:
+            name = name.strip().lower()
+            if not name:
+                continue
+            tag_obj = self.ensure_tag(name)
             post.tags.append(tag_obj)
+
         self.db.add(post)
         self.db.flush()
         self.db.refresh(post)
