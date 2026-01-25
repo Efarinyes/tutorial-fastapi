@@ -16,8 +16,9 @@ def create_app() -> FastAPI:
     Base.metadata.create_all(bind=engine) # Només s'usa en desenvolupament. En producció caldrà fer migracions
     app.include_router(auth_router, prefix='/api/v1')
     app.include_router(posts_router)
-    app.include_router(uploads_router)
     app.include_router(tags_router)
+    app.include_router(uploads_router)
+
 
     os.makedirs(MEDIA_DIR, exist_ok=True)
     app.mount('/media', StaticFiles(directory=MEDIA_DIR), name='media')
