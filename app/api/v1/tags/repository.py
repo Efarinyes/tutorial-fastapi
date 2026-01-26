@@ -4,13 +4,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
 from app.api.v1.tags.schemas import TagPublic
-from app.models import TagORM
+from app.models import TagORM, PostORM, post_tags
 from app.services.pagination import paginate_query
 
 
 class TagRepository:
     def __init__(self, db: Session):
         self.db = db
+
+    def get_tag_id(self, tag_id: int) -> Optional[TagORM]:
+        tag_find = select(TagORM).where(TagORM.id == tag_id)
+        return self.db.execute(tag_find).scalar_one_or_none()
 
     def list_tags(
             self,
@@ -54,3 +58,41 @@ class TagRepository:
         self.db.add(tag_obj)
         self.db.flush()
         return tag_obj
+
+    def tag_update(self, tag_id: int, name: str):
+        tag = self.get_tag_id(tag_id)
+        if not tag:
+            return None
+        if name is not None:
+            tag.name = name.strip().lower()
+
+        self.db.add(tag)
+        self.db.flush()
+        self.db.refresh(tag)
+        return tag
+
+    def tag_delete(self, tag_id: int) -> bool:
+        tag = self.get_tag_id(tag_id)
+        if not tag:
+            return False
+        self.db.delete(tag)
+        return True
+
+    def most_popular(self) -> dict | None:
+        row = (
+            self.db.execute(
+                select(
+                    TagORM.id.label('id'),
+                    TagORM.name.label('name'),
+                    func.count(PostORM.id).label('count'),
+                )
+                .join(post_tags, post_tags.c.tag_id == TagORM.id)
+                .join(PostORM, PostORM.id == post_tags.c.post_id)
+                .group_by(TagORM.id, TagORM.name)
+                .order_by(func.count(PostORM.id).desc(), func.lower(TagORM.name).asc())
+                .limit(1)
+            )
+            .mappings()
+            .first()
+        )
+        return dict(row) if row else None

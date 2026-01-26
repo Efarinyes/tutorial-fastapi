@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.api.v1.tags.schemas import TagPublic, TagCreate
+from app.api.v1.tags.schemas import TagPublic, TagCreate, TagUpdate
 from app.api.v1.tags.repository import TagRepository
 from app.core.db import get_db
 from app.core.security import get_current_user
@@ -35,3 +35,37 @@ def create_tag(tag: TagCreate, db: Session = Depends(get_db), user = Depends(get
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(status_code=500, detail='Error al crear l\'etiqueta')
+
+@router.put('/{tag_id}', response_model = TagPublic)
+def update_tag(
+        tag_id: int,
+        payload: TagUpdate,
+        db: Session = Depends(get_db),
+        user = Depends(get_current_user),
+):
+    repository = TagRepository(db)
+    tag = repository.tag_update(tag_id, name=payload.name)
+    if not tag:
+        raise HTTPException(status_code=404, detail='Etiqueta no existeix')
+    db.commit()
+    return TagPublic.model_validate(tag)
+
+@router.delete('/{tag_id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_tag(tag_id: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
+    repository = TagRepository(db)
+    delete = repository.tag_delete(tag_id)
+    if not delete:
+        raise HTTPException(status_code=404, detail='Etiqueta no existeix')
+    db.commit()
+    return None
+
+@router.get('popular/top')
+def get_most_popular_tags(
+        db: Session = Depends(get_db),
+        user=Depends(get_current_user),
+):
+    repository = TagRepository(db)
+    row = repository.most_popular()
+    if not row:
+        raise HTTPException(status_code=404, detail='No hi ha etiqueta més popular')
+    return row
